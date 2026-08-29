@@ -1,18 +1,28 @@
 # hitorro-fleet-mail-analytics
 
-Fleet member that turns the hitorro mail pipeline into an "all seeing eye" for
-your inbox. Sits beside `hitorro-fleet-retrieval` and owns everything that
-needs to survive a restart:
+Mac Mail analytics: the hitorro stream pipeline enriches your mail
+(sentence segmentation + NER + KV/Lucene index) and this fleet member
+puts an interactive React UI on top so you can slice by
+sender / domain / topic / thread, run saved queries with alerts,
+summarize threads with an LLM, and surface enrichment ideas.
+
+Sits beside `hitorro-fleet-retrieval` and owns everything that needs
+to survive a restart:
 
 - **Ingest orchestration** — pluggable mail sources (Mac Mail SQLite or IMAP),
   per-source watermarks, backfill + delta pulls; drives the existing mesh
   enrichment pipeline via `JobRunner`.
-- **Analytics REST** — thin shapers over `hitorro-fleet-retrieval` for
-  dashboards (time histograms, top senders / domains / entities, threads,
-  action candidates, trends).
+- **Analytics REST + UI** — thin shapers over `hitorro-fleet-retrieval` for
+  dashboards (time histograms, top senders / domains / NER entities,
+  threads, action candidates, trends), rendered by a React SPA served
+  from the same jar.
 - **Durable queries + alerts** — saved queries, cron-scheduled alert rules
   with fingerprint-delta detection, three delivery channels (email, webhook,
   in-app inbox), retry + backoff.
+- **LLM summarization** — per-thread and per-entity summaries with a
+  six-style catalogue (brief / per-participant contributions / action
+  items / decisions / tone / entities), backed by fleet-retrieval's
+  `/api/retrieval/summarize` primitive.
 - **Reports** — scheduled query bundles that materialize durable artifacts.
 - **Enrichment suggestions** — passive audit of your queries → proposals for
   new JVS fields / enricher steps to add to the pipeline.
