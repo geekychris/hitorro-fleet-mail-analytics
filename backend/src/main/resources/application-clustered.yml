@@ -1,0 +1,38 @@
+# Clustered: Postgres, IMAP source, external SMTP relay, tighter CORS.
+# Override secrets via env: MAILANALYTICS_DELIVERY_EMAIL_PASSWORD etc.
+spring:
+  datasource:
+    url: ${MAILANALYTICS_DB_URL:jdbc:postgresql://localhost:5432/mailanalytics}
+    driver-class-name: org.postgresql.Driver
+    username: ${MAILANALYTICS_DB_USER:mailanalytics}
+    password: ${MAILANALYTICS_DB_PASSWORD:mailanalytics}
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+mailanalytics:
+  mode: clustered
+  cors:
+    # locked down by default; override at deploy time
+    allowed-origins: ""
+  delivery:
+    email:
+      enabled: true
+      host: ${MAILANALYTICS_SMTP_HOST:smtp.internal}
+      port: ${MAILANALYTICS_SMTP_PORT:587}
+      user: ${MAILANALYTICS_SMTP_USER:}
+      password: ${MAILANALYTICS_SMTP_PASSWORD:}
+      starttls: true
+      from: ${MAILANALYTICS_SMTP_FROM:mail-analytics@hitorro}
+  ingest:
+    sources:
+      - id: primary-imap
+        kind: imap
+        enabled: true
+        cron: "0 */5 * * * *"
+        config:
+          host: ${MAILANALYTICS_IMAP_HOST:}
+          port: "993"
+          user: ${MAILANALYTICS_IMAP_USER:}
+          password: ${MAILANALYTICS_IMAP_PASSWORD:}
+          ssl: "true"
+          folder: INBOX

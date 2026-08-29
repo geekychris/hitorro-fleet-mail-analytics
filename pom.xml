@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.hitorro</groupId>
+    <artifactId>hitorro-fleet-mail-analytics-parent</artifactId>
+    <version>3.0.1</version>
+    <packaging>pom</packaging>
+
+    <name>hitorro-fleet-mail-analytics (parent)</name>
+    <description>
+        Fleet member that owns durable state for mail analytics on top of the
+        hitorro pipeline: ingest watermarks, saved queries, alert rules,
+        firings, in-app inbox, reports, enrichment suggestions. Backend
+        Spring Boot service + React SPA. Runs Mac-local (H2 + Mac Mail
+        SQLite), Docker, or K8s / Orion (Postgres + IMAP) via the same jar
+        with a profile switch.
+    </description>
+
+    <modules>
+        <module>backend</module>
+    </modules>
+</project>

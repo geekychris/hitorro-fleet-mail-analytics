@@ -1,0 +1,69 @@
+# Baseline config. Profile files (standalone / clustered) override the
+# pieces that actually differ between deployment modes.
+server:
+  port: 8100
+  compression:
+    enabled: true
+
+spring:
+  application:
+    name: hitorro-fleet-mail-analytics
+  profiles:
+    default: standalone
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema. Hibernate does not validate — `validate`
+      # is too strict about @Lob/TEXT/CLOB round-trips on H2 in Postgres mode.
+      ddl-auto: none
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.hitorro.fleet.mailanalytics: INFO
+
+mailanalytics:
+  mode: standalone
+  retrieval:
+    base-url: http://localhost:8095
+    timeout-ms: 15000
+    default-index: mail
+  pipelines:
+    home: ${user.home}/hthome/pipelines
+    hot-dir: ${user.home}/hthome/mailanalytics/hot
+    ingest-job-yaml: classpath:jobs/mail-enrich-from-ndjson.yaml
+  ingest:
+    default-cron: "0 */5 * * * *"
+    batch-size: 500
+    backfill-horizon: 365d
+    sources: []
+  delivery:
+    email:
+      enabled: false
+      host: localhost
+      port: 25
+      from: mail-analytics@localhost
+    webhook:
+      timeout-ms: 10000
+      max-retries: 3
+  cors:
+    allowed-origins: "*"

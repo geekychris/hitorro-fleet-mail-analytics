@@ -1,0 +1,53 @@
+# =========================================================================
+# mail-enrich-from-ndjson
+#
+# Job template invoked by hitorro-fleet-mail-analytics after it writes
+# a delta batch to __NDJSON_PATH__. Same shape as mail-to-jvs-enriched
+# but sources from an NDJSON file instead of the SQLite database — the
+# analytics service does the delta filtering upstream.
+#
+# HttpPipelineTrigger substitutes __NDJSON_PATH__ and __SOURCE_ID__
+# before POSTing the YAML to the mesh-driver.
+# =========================================================================
+
+job: mail-enrich-from-ndjson
+restartable: false
+nodes:
+  - id: enrich
+    pipeline:
+      source: {kind: ndjson-file, url: "__NDJSON_PATH__"}
+      steps:
+        - kind: groovy-map
+          script: |
+            def out = [:]
+            out.ht_type = 'mail_email'
+            def sid = String.valueOf(row.source_cursor)
+            out.id = [id: sid, did: sid, domain: '__SOURCE_ID__']
+            out.title = [ mls: [ [ lang: 'en', text: row.subject ?: '' ] ] ]
+            if (row.body_preview != null && !row.body_preview.toString().isEmpty()) {
+                out.body = [ mls: [ [ lang: 'en', text: row.body_preview ] ] ]
+            }
+            if (row.date_received != null) {
+                try { out.times = [ date_received: java.time.Instant.parse(row.date_received).toEpochMilli() ] }
+                catch (Exception ignore) {}
+            }
+            out.sender_address  = row.sender_address
+            out.sender_name     = row.sender_name
+            out.sender_domain   = row.sender_domain
+            out.mailbox_url     = row.mailbox_url
+            def flags = row.flags ?: [:]
+            out.read            = flags.read as boolean
+            out.flagged         = flags.flagged as boolean
+            out.size_bytes      = flags.size_bytes ?: 0L
+            out.recipient_count = flags.recipient_count ?: 0
+            out.is_newsletter   = flags.newsletter as boolean
+            out
+        - kind: jvs-enrich
+          tags: [basic, segmented, pos, ner]
+          typeJsonResource: "classpath:/types/mail_email.json"
+      sinks:
+        - kind: jvs-lucene
+          name: mail
+          typeJsonResource: "classpath:/types/mail_email.json"
+        - kind: kvstore
+          name: mail

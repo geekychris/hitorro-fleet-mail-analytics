@@ -1,0 +1,36 @@
+# Maven
+target/
+**/target/
+*.jar.original
+dependency-reduced-pom.xml
+
+# IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node / frontend build
+frontend/node_modules/
+frontend/**/node_modules/
+frontend/**/dist/
+frontend/packages/*/dist/
+
+# Runtime state (H2, hot dirs, logs — user-machine files, not repo content)
+/hthome/
+*.mv.db
+*.trace.db
+*.lock.db
+*.log
+
+# Temp / scratch
+/tmp/

@@ -1,0 +1,12 @@
+{
+  "name": "hitorro-fleet-mail-analytics-frontend",
+  "version": "3.0.1",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm -F mail-analytics-app dev"
+  },
+  "devDependencies": {
+    "typescript": "5.4.5"
+  }
+}

@@ -1,0 +1,21 @@
+# Standalone: laptop-friendly. Embedded H2 (file-backed under HT_HOME),
+# Mac Mail SQLite source, permissive CORS, in-process scheduler.
+spring:
+  datasource:
+    url: jdbc:h2:file:${user.home}/hthome/mailanalytics/db/mailanalytics;AUTO_SERVER=TRUE;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+
+mailanalytics:
+  mode: standalone
+  ingest:
+    sources:
+      - id: mac-mail
+        kind: sqlite
+        enabled: true
+        cron: "0 */5 * * * *"
+        config:
+          path: ${user.home}/Library/Mail/V10/MailData/Envelope Index
