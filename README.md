@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="Hitorro Fleet Mail Analytics logo" width="180">
+</p>
+
 # hitorro-fleet-mail-analytics
 
 Mac Mail analytics: the hitorro stream pipeline enriches your mail
