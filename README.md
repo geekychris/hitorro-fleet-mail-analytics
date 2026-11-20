@@ -73,7 +73,7 @@ mvn -pl hitorro-fleet-mail-analytics/backend -am clean install -Dskip.frontend=t
 # 1. bring up fleet-retrieval on :8095 (see hitorro-fleet-retrieval README)
 # 2. then:
 export HT_HOME=~/hitorro
-java -jar hitorro-fleet-mail-analytics/backend/target/hitorro-fleet-mail-analytics-3.0.1.jar
+java -jar hitorro-fleet-mail-analytics/backend/target/hitorro-fleet-mail-analytics-3.0.2.jar
 ```
 
 Health: `GET http://localhost:8100/api/health`. React SPA served from `/`.
