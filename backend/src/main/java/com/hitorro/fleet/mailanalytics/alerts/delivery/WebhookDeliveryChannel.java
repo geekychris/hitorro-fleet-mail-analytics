@@ -3,6 +3,7 @@
  */
 package com.hitorro.fleet.mailanalytics.alerts.delivery;
 
+import com.hitorro.fleet.mailanalytics.config.Jackson2Codecs;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hitorro.fleet.mailanalytics.config.MailAnalyticsProperties;
@@ -53,7 +54,7 @@ public class WebhookDeliveryChannel implements DeliveryChannel {
 
         try {
             String bodyStr = mapper.writeValueAsString(body);
-            WebClient.RequestBodySpec req = WebClient.builder()
+            WebClient.RequestBodySpec req = Jackson2Codecs.webClientBuilder()
                     .baseUrl(hook.getUrl()).build()
                     .post().uri("").header("Content-Type", "application/json");
             if (hook.getHeadersJson() != null && !hook.getHeadersJson().isBlank()) {
