@@ -13,7 +13,7 @@ mvn -pl backend -am clean install -Dskip.frontend=true   # backend only
 
 # 2. run
 export HT_HOME=~/hitorro
-java -jar backend/target/hitorro-fleet-mail-analytics-3.0.1.jar
+java -jar backend/target/hitorro-fleet-mail-analytics-3.0.2.jar
 ```
 
 App on `http://localhost:8100`. H2 file DB at `~/hthome/mailanalytics/db/`.
