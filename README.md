@@ -36,7 +36,7 @@ to survive a restart:
 ```
 hitorro-fleet-mail-analytics/
 ├── pom.xml                  parent aggregator
-├── backend/                 Spring Boot 3.2, Java 21, JPA/Hibernate
+├── backend/                 Spring Boot 4.1, Java 21, JPA/Hibernate
 │   ├── pom.xml
 │   └── src/main/{java,resources}/
 └── frontend/                pnpm workspace: packages/core + packages/mail-analytics-app

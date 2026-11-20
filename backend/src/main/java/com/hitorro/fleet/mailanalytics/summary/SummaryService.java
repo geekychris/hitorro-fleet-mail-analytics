@@ -3,6 +3,7 @@
  */
 package com.hitorro.fleet.mailanalytics.summary;
 
+import com.hitorro.fleet.mailanalytics.config.Jackson2Codecs;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hitorro.fleet.mailanalytics.analytics.ThreadClusteringService;
@@ -52,7 +53,7 @@ public class SummaryService {
         this.retrieval = retrieval;
         this.threads = threads;
         this.props = props;
-        this.fleet = WebClient.builder()
+        this.fleet = Jackson2Codecs.webClientBuilder()
                 .baseUrl(props.getRetrieval().getBaseUrl().replaceAll("/+$", ""))
                 .codecs(cfg -> cfg.defaultCodecs().maxInMemorySize(4 * 1024 * 1024))
                 .build();

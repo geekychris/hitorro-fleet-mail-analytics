@@ -32,7 +32,7 @@ public class FleetRetrievalConfig {
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, Math.min(5000, timeoutMs))
                 .doOnConnected(c -> c.addHandlerLast(
                         new ReadTimeoutHandler(timeoutMs, TimeUnit.MILLISECONDS)));
-        return WebClient.builder()
+        return Jackson2Codecs.webClientBuilder()
                 .baseUrl(baseUrl)
                 .clientConnector(new ReactorClientHttpConnector(http))
                 // Enriched mail JVS (segmented_ner per sentence) can push

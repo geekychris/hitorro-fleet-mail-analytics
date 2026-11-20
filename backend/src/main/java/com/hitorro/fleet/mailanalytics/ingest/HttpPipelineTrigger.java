@@ -3,6 +3,7 @@
  */
 package com.hitorro.fleet.mailanalytics.ingest;
 
+import com.hitorro.fleet.mailanalytics.config.Jackson2Codecs;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +36,7 @@ public class HttpPipelineTrigger implements PipelineTrigger {
     public HttpPipelineTrigger(
             @Value("${mailanalytics.pipeline.driver-url:http://localhost:8090}") String driverUrl,
             @Value("${mailanalytics.pipeline.job-template:classpath:jobs/mail-enrich-from-ndjson.yaml}") String jobTemplatePath) {
-        this.client = WebClient.builder().baseUrl(driverUrl).build();
+        this.client = Jackson2Codecs.webClientBuilder().baseUrl(driverUrl).build();
         this.jobTemplatePath = jobTemplatePath;
     }
 

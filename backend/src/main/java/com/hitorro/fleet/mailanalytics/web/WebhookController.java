@@ -3,6 +3,7 @@
  */
 package com.hitorro.fleet.mailanalytics.web;
 
+import com.hitorro.fleet.mailanalytics.config.Jackson2Codecs;
 import com.hitorro.fleet.mailanalytics.entities.WebhookConfig;
 import com.hitorro.fleet.mailanalytics.repo.WebhookConfigRepository;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +15,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.Duration;
 import java.util.List;
@@ -50,7 +50,7 @@ public class WebhookController {
     public Map<String, Object> test(@PathVariable Long id) {
         WebhookConfig w = repo.findById(id).orElseThrow();
         try {
-            Integer status = WebClient.builder().baseUrl(w.getUrl()).build()
+            Integer status = Jackson2Codecs.webClientBuilder().baseUrl(w.getUrl()).build()
                     .post().uri("").header("Content-Type", "application/json")
                     .bodyValue(Map.of("test", true, "name", w.getName()))
                     .exchangeToMono(r -> r.releaseBody().thenReturn(r.statusCode().value()))
