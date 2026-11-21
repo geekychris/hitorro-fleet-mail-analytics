@@ -43,6 +43,7 @@ class BridgeMailSourceTest {
     static final AtomicReference<String> lastQuery = new AtomicReference<>();
     static final AtomicReference<String> lastAuth = new AtomicReference<>();
     static volatile int statusOverride = 0;
+    static volatile String errorKind = "no_access";
 
     static final String PAGE = """
         {"messages":[
@@ -88,7 +89,7 @@ class BridgeMailSourceTest {
                 body = "{\"error\":\"unauthorized\"}";
             } else if (statusOverride != 0) {
                 code = statusOverride;
-                body = "{\"error\":\"no_access\"}";
+                body = "{\"error\":\"" + errorKind + "\"}";
             } else if (ex.getRequestURI().getPath().equals("/v1/status")) {
                 body = "{\"mail\":{\"ok\":true,\"counts\":{\"messages\":2,\"max_id\":42}}}";
             } else {
@@ -107,7 +108,7 @@ class BridgeMailSourceTest {
     static void stop() { if (server != null) server.stop(0); }
 
     @BeforeEach
-    void reset() { statusOverride = 0; }
+    void reset() { statusOverride = 0; errorKind = "no_access"; }
 
     Map<String, String> config(String token, String fp) {
         Map<String, String> c = new HashMap<>();
@@ -181,6 +182,9 @@ class BridgeMailSourceTest {
         BridgeMailSource src = new BridgeMailSource("m1", config(TOKEN, fingerprint), CLOCK);
         assertThatThrownBy(() -> src.fetchSince(new Watermark(), 10))
                 .hasMessageContaining("Full Disk Access");
+        errorKind = "mail_not_set_up";
+        assertThatThrownBy(() -> src.fetchSince(new Watermark(), 10))
+                .hasMessageContaining("Mail.app is not set up");
     }
 
     @Test

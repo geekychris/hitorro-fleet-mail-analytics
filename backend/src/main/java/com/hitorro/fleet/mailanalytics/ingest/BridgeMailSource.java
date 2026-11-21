@@ -177,7 +177,9 @@ public class BridgeMailSource implements MailSource {
                 case 401 -> "bridge rejected the token (401)";
                 case 403 -> "bridge refused this source address (403): add it to the bridge's --allow list";
                 case 429 -> "bridge rate limit (429)";
-                case 503 -> "bridge cannot read Mail (503 " + kind + "): grant Full Disk Access to the mailbridge binary";
+                case 503 -> "mail_not_set_up".equals(kind)
+                        ? "Mail.app is not set up on the bridge's Mac (503 mail_not_set_up): point this source at the Mac where Mail is used"
+                        : "bridge cannot read Mail (503 " + kind + "): grant Full Disk Access to the mailbridge binary";
                 default -> "bridge returned HTTP " + code + (kind.isEmpty() ? "" : " (" + kind + ")");
             };
             log.warn("BridgeMailSource[{}] {} {}", id, pathAndQuery.replaceAll("\\?.*", ""), detail);
