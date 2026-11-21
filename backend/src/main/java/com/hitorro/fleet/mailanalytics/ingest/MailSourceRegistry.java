@@ -32,14 +32,22 @@ public class MailSourceRegistry {
     void init() {
         for (var s : props.getIngest().getSources()) {
             if (!s.isEnabled()) { log.info("mail source '{}' disabled", s.getId()); continue; }
-            MailSource src = switch (s.getKind()) {
-                case "sqlite" -> new SqliteMailSource(s.getId(), s.getConfig().getOrDefault("path", ""));
-                case "imap" -> new ImapMailSource(s.getId(), s.getConfig());
-                default -> {
-                    log.warn("unknown mail source kind '{}' — skipping", s.getKind());
-                    yield null;
-                }
-            };
+            MailSource src;
+            try {
+                src = switch (s.getKind()) {
+                    case "sqlite" -> new SqliteMailSource(s.getId(), s.getConfig().getOrDefault("path", ""));
+                    case "imap" -> new ImapMailSource(s.getId(), s.getConfig());
+                    case "bridge" -> new BridgeMailSource(s.getId(), s.getConfig());
+                    default -> {
+                        log.warn("unknown mail source kind '{}' — skipping", s.getKind());
+                        yield null;
+                    }
+                };
+            } catch (IllegalArgumentException e) {
+                // A misconfigured source (e.g. a missing Secret) must not stop the app.
+                log.warn("mail source '{}' misconfigured, skipping: {}", s.getId(), e.getMessage());
+                src = null;
+            }
             if (src != null) {
                 sources.put(s.getId(), src);
                 log.info("registered mail source id='{}' kind={}", s.getId(), s.getKind());
