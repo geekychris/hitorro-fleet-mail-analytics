@@ -3,8 +3,10 @@
  */
 package com.hitorro.fleet.mailanalytics.ingest;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import com.hitorro.fleet.mailanalytics.config.Jackson2Mappers;
+import com.hitorro.fleet.mailanalytics.config.JsonValues;
 import com.hitorro.fleet.mailanalytics.config.MailAnalyticsProperties;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
@@ -25,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /** RetrievalIndexPipelineTrigger against a stub fleet-retrieval ingest API. */
 class RetrievalIndexPipelineTriggerTest {
 
-    static final ObjectMapper M = new ObjectMapper();
+    static final ObjectMapper M = Jackson2Mappers.json();
     HttpServer server;
     final List<String> paths = new CopyOnWriteArrayList<>();
     final List<JsonNode> bodies = new CopyOnWriteArrayList<>();
@@ -81,7 +83,7 @@ class RetrievalIndexPipelineTriggerTest {
         assertThat(paths).containsExactly("/api/ingest/indexes",
                 "/api/ingest/indexes/mail/documents", "/api/ingest/indexes/mail/documents",
                 "/api/ingest/indexes/mail/documents", "/api/ingest/indexes/mail/documents");
-        assertThat(bodies.get(0).path("typeName").asText()).isEqualTo("mail_email_flat");
+        assertThat(JsonValues.asText(bodies.get(0).path("typeName"))).isEqualTo("mail_email_flat");
         assertThat(bodies.get(1).size()).isEqualTo(2);
         assertThat(bodies.get(2).size()).isEqualTo(1);
     }
@@ -89,23 +91,23 @@ class RetrievalIndexPipelineTriggerTest {
     @Test
     void maps_a_row_to_the_flat_type() throws Exception {
         JsonNode d = RetrievalIndexPipelineTrigger.toDocument(M.readTree(row(42)), "mail_email_flat");
-        assertThat(d.path("type").asText()).isEqualTo("mail_email_flat");
-        assertThat(d.path("id").path("domain").asText()).isEqualTo("m1-mail");
-        assertThat(d.path("id").path("did").asText()).isEqualTo("42");
+        assertThat(JsonValues.asText(d.path("type"))).isEqualTo("mail_email_flat");
+        assertThat(JsonValues.asText(d.path("id").path("domain"))).isEqualTo("m1-mail");
+        assertThat(JsonValues.asText(d.path("id").path("did"))).isEqualTo("42");
         long millis = java.time.Instant.parse("2026-11-19T10:00:00Z").toEpochMilli();
-        assertThat(d.path("date_received").asLong()).isEqualTo(millis);
-        assertThat(d.path("times").path("date_received").asLong()).isEqualTo(millis);
-        assertThat(d.path("sender_domain").asText()).isEqualTo("example.com");
-        assertThat(d.path("read").asBoolean()).isTrue();
-        assertThat(d.path("recipient_count").asLong()).isEqualTo(2);
-        assertThat(d.path("title").path("mls").path(0).path("text").asText()).isEqualTo("Synthetic 42");
-        assertThat(d.path("body").path("mls").path(0).path("clean").asText()).isEqualTo("preview");
+        assertThat(JsonValues.asLong(d.path("date_received"))).isEqualTo(millis);
+        assertThat(JsonValues.asLong(d.path("times").path("date_received"))).isEqualTo(millis);
+        assertThat(JsonValues.asText(d.path("sender_domain"))).isEqualTo("example.com");
+        assertThat(JsonValues.asBoolean(d.path("read"))).isTrue();
+        assertThat(JsonValues.asLong(d.path("recipient_count"))).isEqualTo(2);
+        assertThat(JsonValues.asText(d.path("title").path("mls").path(0).path("text"))).isEqualTo("Synthetic 42");
+        assertThat(JsonValues.asText(d.path("body").path("mls").path(0).path("clean"))).isEqualTo("preview");
     }
 
     @Test
     void the_type_definition_declares_facetable_fields_and_no_mls() throws Exception {
         JsonNode type = M.readTree(getClass().getResourceAsStream("/types/mail_email_flat.json"));
-        assertThat(type.path("name").asText()).isEqualTo("mail_email_flat");
+        assertThat(JsonValues.asText(type.path("name"))).isEqualTo("mail_email_flat");
         assertThat(type.toString()).doesNotContain("core_mls");
         assertThat(type.toString()).contains("\"sender_domain\"", "\"date_received\"");
     }

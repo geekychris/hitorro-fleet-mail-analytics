@@ -3,11 +3,12 @@
  */
 package com.hitorro.fleet.mailanalytics.ingest;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
+import com.hitorro.fleet.mailanalytics.config.JsonValues;
 import com.hitorro.fleet.mailanalytics.config.MailAnalyticsProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,7 +62,7 @@ public class RetrievalIndexPipelineTrigger implements PipelineTrigger {
     private final int chunk;
     private final HttpClient http;
     private final Duration timeout;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json();
     private volatile boolean indexEnsured;
 
     public RetrievalIndexPipelineTrigger(
@@ -104,22 +105,22 @@ public class RetrievalIndexPipelineTrigger implements PipelineTrigger {
     static ObjectNode toDocument(JsonNode row, String typeName) {
         ObjectNode d = NF.objectNode();
         d.put("type", typeName);
-        String source = row.path("source").asText("mail");
-        String did = row.path("source_cursor").asText();
+        String source = JsonValues.asText(row.path("source"), "mail");
+        String did = JsonValues.asText(row.path("source_cursor"));
         ObjectNode id = d.putObject("id");
         id.put("domain", source);
         id.put("did", did);
         id.put("id", source + "/" + did);
 
-        String subject = row.path("subject").asText("");
-        String preview = row.path("body_preview").asText("");
+        String subject = JsonValues.asText(row.path("subject"), "");
+        String preview = JsonValues.asText(row.path("body_preview"), "");
         d.put("subject", subject);
         d.put("body_preview", preview);
         d.set("title", mls(subject));
         if (!preview.isEmpty()) d.set("body", mls(preview));
 
         long millis = 0;
-        String recv = row.path("date_received").asText("");
+        String recv = JsonValues.asText(row.path("date_received"), "");
         if (!recv.isEmpty()) {
             try { millis = Instant.parse(recv).toEpochMilli(); } catch (RuntimeException ignore) { }
         }
@@ -129,17 +130,17 @@ public class RetrievalIndexPipelineTrigger implements PipelineTrigger {
             times.put("created", millis);
             times.put("date_received", millis);
         }
-        d.put("message_id", row.path("message_id").asText(""));
-        d.put("sender_address", row.path("sender_address").asText(""));
-        d.put("sender_name", row.path("sender_name").asText(""));
-        d.put("sender_domain", row.path("sender_domain").asText(""));
-        d.put("mailbox_url", row.path("mailbox_url").asText(""));
+        d.put("message_id", JsonValues.asText(row.path("message_id"), ""));
+        d.put("sender_address", JsonValues.asText(row.path("sender_address"), ""));
+        d.put("sender_name", JsonValues.asText(row.path("sender_name"), ""));
+        d.put("sender_domain", JsonValues.asText(row.path("sender_domain"), ""));
+        d.put("mailbox_url", JsonValues.asText(row.path("mailbox_url"), ""));
         JsonNode f = row.path("flags");
-        d.put("read", f.path("read").asBoolean(false));
-        d.put("flagged", f.path("flagged").asBoolean(false));
-        d.put("is_newsletter", f.path("newsletter").asBoolean(false));
-        d.put("size_bytes", f.path("size_bytes").asLong(0));
-        d.put("recipient_count", f.path("recipient_count").asLong(0));
+        d.put("read", JsonValues.asBoolean(f.path("read"), false));
+        d.put("flagged", JsonValues.asBoolean(f.path("flagged"), false));
+        d.put("is_newsletter", JsonValues.asBoolean(f.path("newsletter"), false));
+        d.put("size_bytes", JsonValues.asLong(f.path("size_bytes"), 0));
+        d.put("recipient_count", JsonValues.asLong(f.path("recipient_count"), 0));
         return d;
     }
 
@@ -158,18 +159,18 @@ public class RetrievalIndexPipelineTrigger implements PipelineTrigger {
         body.put("name", index);
         body.put("typeName", typeName);
         JsonNode resp = send("/api/ingest/indexes", body);
-        if (!resp.path("success").asBoolean(false)) {
-            throw new RuntimeException("fleet-retrieval refused to create index " + index + ": " + resp.path("error").asText(""));
+        if (!JsonValues.asBoolean(resp.path("success"), false)) {
+            throw new RuntimeException("fleet-retrieval refused to create index " + index + ": " + JsonValues.asText(resp.path("error"), ""));
         }
         indexEnsured = true;
     }
 
     private int post(ArrayNode docs) {
         JsonNode resp = send("/api/ingest/indexes/" + URLEncoder.encode(index, StandardCharsets.UTF_8) + "/documents", docs);
-        if (!resp.path("success").asBoolean(false)) {
-            throw new RuntimeException("fleet-retrieval ingest failed: " + resp.path("error").asText("unknown"));
+        if (!JsonValues.asBoolean(resp.path("success"), false)) {
+            throw new RuntimeException("fleet-retrieval ingest failed: " + JsonValues.asText(resp.path("error"), "unknown"));
         }
-        return resp.path("indexed").asInt(docs.size());
+        return JsonValues.asInt(resp.path("indexed"), docs.size());
     }
 
     private JsonNode send(String path, JsonNode body) {
