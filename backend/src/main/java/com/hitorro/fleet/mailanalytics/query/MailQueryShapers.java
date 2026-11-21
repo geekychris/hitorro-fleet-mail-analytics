@@ -135,13 +135,14 @@ public class MailQueryShapers {
         };
         Instant cursor = from.truncatedTo(unit == ChronoUnit.WEEKS ? ChronoUnit.DAYS : unit);
         while (cursor.isBefore(to)) {
-            Instant next = cursor.plus(1, unit);
+            // Instant supports DAYS but not WEEKS: a week is 7 days.
+            Instant next = unit == ChronoUnit.WEEKS ? cursor.plus(7, ChronoUnit.DAYS) : cursor.plus(1, unit);
             QueryBuilder qb = QueryBuilder.over(index())
                     .dateBetween("date_received.date_s",cursor, next)
                     .raw(extraFilter)
                     .page(0, 0);
-            JsonNode resp = run(qb);
-            long count = totalHits(resp);
+            JsonNode resp = run(HitCounts.countable(qb));
+            long count = HitCounts.exact(resp);
             out.add(new Bucket(cursor, count));
             cursor = next;
         }
@@ -166,12 +167,6 @@ public class MailQueryShapers {
                 .facet(field)
                 .page(0, 0);
         return facetValuesTopN(run(qb), field, limit, v -> true);
-    }
-
-    private long totalHits(JsonNode resp) {
-        if (resp == null) return 0;
-        JsonNode n = resp.get("totalHits");
-        return n == null ? 0 : JsonValues.asLong(n);
     }
 
     private List<TopN> facetValuesTopN(JsonNode resp, String dim, int limit,

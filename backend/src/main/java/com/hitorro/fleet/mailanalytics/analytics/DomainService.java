@@ -6,6 +6,7 @@ package com.hitorro.fleet.mailanalytics.analytics;
 import tools.jackson.databind.JsonNode;
 import com.hitorro.fleet.mailanalytics.config.MailAnalyticsProperties;
 import com.hitorro.fleet.mailanalytics.query.MailQueryShapers;
+import com.hitorro.fleet.mailanalytics.query.HitCounts;
 import com.hitorro.fleet.mailanalytics.query.QueryBuilder;
 import com.hitorro.fleet.mailanalytics.query.RetrievalClient;
 import org.springframework.stereotype.Service;
@@ -70,7 +71,7 @@ public class DomainService {
                 .term("sender_domain", domain)
                 .dateBetween("date_received.date_s",from, to)
                 .page(0, 0);
-        JsonNode resp = client.execute(qb.buildExecute());
-        return resp == null ? 0 : JsonValues.asLong(resp.path("totalHits"));
+        JsonNode resp = client.execute(HitCounts.countable(qb).buildExecute());
+        return HitCounts.exact(resp);
     }
 }
