@@ -29,7 +29,8 @@ public final class Jackson2Mappers {
     public static JsonMapper.Builder builder() {
         return JsonMapper.builder(JsonFactory.builderWithJackson2Defaults()
                 .streamReadConstraints(READ_CONSTRAINTS).streamWriteConstraints(WRITE_CONSTRAINTS).build())
-                .configureForJackson2();
+                .configureForJackson2()
+                .addModule(new Jackson2JdkModule());   // as hitorro-core's JsonMappers
     }
 
     public static JsonMapper json() {
