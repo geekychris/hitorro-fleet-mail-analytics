@@ -3,8 +3,9 @@
  */
 package com.hitorro.fleet.mailanalytics.ingest;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import com.hitorro.fleet.mailanalytics.config.JsonValues;
 import com.hitorro.fleet.mailanalytics.entities.Watermark;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,7 +74,7 @@ public class BridgeMailSource implements MailSource {
     private final Duration timeout;
     private final HttpClient http;
     private final Clock clock;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json();
 
     public BridgeMailSource(String id, Map<String, String> config) {
         this(id, config, Clock.systemUTC());
@@ -126,11 +127,11 @@ public class BridgeMailSource implements MailSource {
         try {
             JsonNode st = getJson("/v1/status");
             JsonNode mail = st.path("mail");
-            if (!mail.path("ok").asBoolean(false)) {
-                return new Health(false, "bridge reachable; mail unavailable: " + mail.path("error").asText("unknown"));
+            if (!JsonValues.asBoolean(mail.path("ok"), false)) {
+                return new Health(false, "bridge reachable; mail unavailable: " + JsonValues.asText(mail.path("error"), "unknown"));
             }
             JsonNode c = mail.path("counts");
-            return new Health(true, c.path("messages").asLong() + " messages, max id " + c.path("max_id").asLong()
+            return new Health(true, JsonValues.asLong(c.path("messages")) + " messages, max id " + JsonValues.asLong(c.path("max_id"))
                     + " @ " + baseUrl.getAuthority());
         } catch (RuntimeException e) {
             return new Health(false, e.getMessage());
@@ -138,20 +139,20 @@ public class BridgeMailSource implements MailSource {
     }
 
     RawMail map(JsonNode m) {
-        long rowId = m.path("id").asLong();
+        long rowId = JsonValues.asLong(m.path("id"));
         JsonNode from = m.path("from");
-        String senderAddress = from.path("address").asText("");
-        String messageId = firstNonBlank(m.path("message_id").asText(""), m.path("remote_id").asText(""));
+        String senderAddress = JsonValues.asText(from.path("address"), "");
+        String messageId = firstNonBlank(JsonValues.asText(m.path("message_id"), ""), JsonValues.asText(m.path("remote_id"), ""));
         if (messageId.isEmpty()) messageId = "macmail:" + rowId;
-        String recv = m.path("date_received").asText("");
+        String recv = JsonValues.asText(m.path("date_received"), "");
         Instant received = recv.isEmpty() ? Instant.EPOCH : Instant.parse(recv);
         JsonNode flags = m.path("flags");
         int recipients = m.path("to").size() + m.path("cc").size();
         return new RawMail(id, rowId, messageId, received,
-                senderAddress, from.path("name").asText(""), domainOf(senderAddress),
-                m.path("subject").asText(""), m.path("snippet").asText(""), m.path("mailbox").asText(""),
-                flags.path("read").asBoolean(false), flags.path("flagged").asBoolean(false),
-                m.path("size").asLong(0), recipients, false);
+                senderAddress, JsonValues.asText(from.path("name"), ""), domainOf(senderAddress),
+                JsonValues.asText(m.path("subject"), ""), JsonValues.asText(m.path("snippet"), ""), JsonValues.asText(m.path("mailbox"), ""),
+                JsonValues.asBoolean(flags.path("read"), false), JsonValues.asBoolean(flags.path("flagged"), false),
+                JsonValues.asLong(m.path("size"), 0), recipients, false);
     }
 
     private JsonNode getJson(String pathAndQuery) {
@@ -172,7 +173,7 @@ public class BridgeMailSource implements MailSource {
         int code = resp.statusCode();
         if (code != 200) {
             String kind = "";
-            try { kind = mapper.readTree(resp.body()).path("error").asText(""); } catch (IOException ignore) { }
+            try { kind = JsonValues.asText(mapper.readTree(resp.body()).path("error"), ""); } catch (tools.jackson.core.JacksonException ignore) { }
             String detail = switch (code) {
                 case 401 -> "bridge rejected the token (401)";
                 case 403 -> "bridge refused this source address (403): add it to the bridge's --allow list";
@@ -187,7 +188,7 @@ public class BridgeMailSource implements MailSource {
         }
         try {
             return mapper.readTree(resp.body());
-        } catch (IOException e) {
+        } catch (tools.jackson.core.JacksonException e) {
             throw new SqliteMailSource.IngestException("bridge returned invalid JSON", e);
         }
     }
