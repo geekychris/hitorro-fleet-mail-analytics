@@ -92,6 +92,24 @@ cause:
 | 503 | the bridge binary lacks Full Disk Access on the Mac |
 | "unreachable" | network failure, or a certificate that doesn't match the pin |
 
+## Without the mesh: index batches straight into fleet-retrieval
+
+`mailanalytics.pipeline.trigger=retrieval` (`RetrievalIndexPipelineTrigger`) skips the mesh
+enrichment job. It posts each ingest batch to fleet-retrieval's standalone ingest API
+(`POST /api/ingest/indexes/{retrieval.default-index}/documents`), creating the index on first
+use. The documents are typed `mail_email_flat` (`backend/src/main/resources/types/mail_email_flat.json`).
+That type has no NLP (mls) fields, so fleet-retrieval needs no OpenNLP models. The type file
+must be on fleet-retrieval's type path, `$HT_BIN/config/types/` (for example a ConfigMap mounted
+there with `subPath`), and fleet-retrieval must be restarted to load it.
+
+| | |
+|---|---|
+| **Works** | message counts and the date histogram (`date_received.date_s` holds epoch millis); top senders and domains, read/flagged/newsletter facets; message lists |
+| **Empty or degraded** | entities (`top-entities`, NER-based topics and clusters); `title`/`body` are stored but not enriched; free-text search over subject and preview (they are indexed as plain text fields) |
+
+`retrieval-type` (default `mail_email_flat`) and `retrieval-chunk` (documents per request,
+default 200) live under `mailanalytics.pipeline`.
+
 ## Adding an alert
 
 1. `POST /api/saved-queries` with the query DSL:
