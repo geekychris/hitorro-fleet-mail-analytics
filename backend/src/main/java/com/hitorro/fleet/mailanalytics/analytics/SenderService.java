@@ -3,7 +3,7 @@
  */
 package com.hitorro.fleet.mailanalytics.analytics;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.fleet.mailanalytics.config.MailAnalyticsProperties;
 import com.hitorro.fleet.mailanalytics.query.MailQueryShapers;
 import com.hitorro.fleet.mailanalytics.query.QueryBuilder;
@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.hitorro.fleet.mailanalytics.config.JsonValues;
 
 @Service
 public class SenderService {
@@ -59,6 +60,6 @@ public class SenderService {
                 .page(0, 0);
         for (String x : extra) qb.raw(x);
         JsonNode resp = client.execute(qb.buildExecute());
-        return resp == null ? 0 : resp.path("totalHits").asLong();
+        return resp == null ? 0 : JsonValues.asLong(resp.path("totalHits"));
     }
 }

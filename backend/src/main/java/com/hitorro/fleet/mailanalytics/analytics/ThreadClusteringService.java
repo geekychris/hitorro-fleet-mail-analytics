@@ -3,7 +3,7 @@
  */
 package com.hitorro.fleet.mailanalytics.analytics;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.fleet.mailanalytics.config.MailAnalyticsProperties;
 import com.hitorro.fleet.mailanalytics.query.QueryBuilder;
 import com.hitorro.fleet.mailanalytics.query.RetrievalClient;
@@ -15,6 +15,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.hitorro.fleet.mailanalytics.config.JsonValues;
 
 /** Cheap subject-prefix clustering. Groups messages whose normalized
  *  subject (Re:/Fwd:/[list] stripped) matches. Enough to power a
@@ -53,7 +54,7 @@ public class ThreadClusteringService {
 
     private static String subjectOf(JsonNode doc) {
         JsonNode t = doc.path("title").path("mls");
-        if (t.isArray() && t.size() > 0) return t.get(0).path("text").asText("");
+        if (t.isArray() && t.size() > 0) return JsonValues.asText(t.get(0).path("text"), "");
         return "";
     }
 
@@ -89,9 +90,9 @@ public class ThreadClusteringService {
         void add(JsonNode doc) {
             Map<String, Object> m = new HashMap<>();
             m.put("id", doc.path("id"));
-            m.put("subject", doc.path("title").path("mls").path(0).path("text").asText(""));
-            m.put("sender", doc.path("sender_address").asText(""));
-            m.put("date", doc.path("times").path("date_received").asLong(0));
+            m.put("subject", JsonValues.asText(doc.path("title").path("mls").path(0).path("text"), ""));
+            m.put("sender", JsonValues.asText(doc.path("sender_address"), ""));
+            m.put("date", JsonValues.asLong(doc.path("times").path("date_received"), 0));
             messages.add(m);
         }
     }

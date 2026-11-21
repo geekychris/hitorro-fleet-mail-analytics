@@ -1,0 +1,106 @@
+{
+  "/": {
+    "console": [],
+    "pageerrors": [],
+    "failed": [],
+    "http": [],
+    "title": "hitorro mail analytics",
+    "textLength": true
+  },
+  "/search": {
+    "console": [],
+    "pageerrors": [],
+    "failed": [],
+    "http": [],
+    "title": "hitorro mail analytics",
+    "textLength": true
+  },
+  "/threads": {
+    "console": [],
+    "pageerrors": [],
+    "failed": [],
+    "http": [],
+    "title": "hitorro mail analytics",
+    "textLength": true
+  },
+  "/topics": {
+    "console": [],
+    "pageerrors": [],
+    "failed": [],
+    "http": [],
+    "title": "hitorro mail analytics",
+    "textLength": true
+  },
+  "/saved": {
+    "console": [],
+    "pageerrors": [],
+    "failed": [],
+    "http": [],
+    "title": "hitorro mail analytics",
+    "textLength": true
+  },
+  "/alerts": {
+    "console": [],
+    "pageerrors": [],
+    "failed": [],
+    "http": [],
+    "title": "hitorro mail analytics",
+    "textLength": true
+  },
+  "/inbox": {
+    "console": [],
+    "pageerrors": [],
+    "failed": [],
+    "http": [],
+    "title": "hitorro mail analytics",
+    "textLength": true
+  },
+  "/reports": {
+    "console": [],
+    "pageerrors": [],
+    "failed": [],
+    "http": [],
+    "title": "hitorro mail analytics",
+    "textLength": true
+  },
+  "/suggestions": {
+    "console": [],
+    "pageerrors": [],
+    "failed": [],
+    "http": [],
+    "title": "hitorro mail analytics",
+    "textLength": true
+  },
+  "/settings": {
+    "console": [],
+    "pageerrors": [],
+    "failed": [],
+    "http": [],
+    "title": "hitorro mail analytics",
+    "textLength": true
+  },
+  "/senders/ada@acme.com": {
+    "console": [],
+    "pageerrors": [],
+    "failed": [],
+    "http": [],
+    "title": "hitorro mail analytics",
+    "textLength": true
+  },
+  "/domains/acme.com": {
+    "console": [],
+    "pageerrors": [],
+    "failed": [],
+    "http": [],
+    "title": "hitorro mail analytics",
+    "textLength": true
+  },
+  "/no-such-route": {
+    "console": [],
+    "pageerrors": [],
+    "failed": [],
+    "http": [],
+    "title": "hitorro mail analytics",
+    "textLength": true
+  }
+}

@@ -3,8 +3,8 @@
  */
 package com.hitorro.fleet.mailanalytics;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.hitorro.fleet.mailanalytics.query.RetrievalClient;
 import com.sun.net.httpserver.HttpServer;
 import org.flywaydb.core.Flyway;
@@ -17,7 +17,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -63,7 +63,7 @@ class MailAnalyticsApplicationTest {
     private static final String SEARCH_RESPONSE =
             "{\"total\":1,\"hits\":[{\"id\":\"m-1\",\"subject\":\"Quarterly report\",\"score\":1.5}]}";
 
-    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final ObjectMapper JSON = com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json();
     private static final AtomicReference<String> lastExecuteBody = new AtomicReference<>();
     private static HttpServer retrieval;
     private static Path tmp;
@@ -122,10 +122,12 @@ class MailAnalyticsApplicationTest {
     }
 
     @Test
-    void springMvcUsesJackson2() {
+    void springMvcUsesJackson3() {
+        // Jackson 3 (Boot's mapper, configured for Jackson 2's format); the jackson2 bridge is gone.
         List<HttpMessageConverter<?>> converters =
                 context.getBean(RequestMappingHandlerAdapter.class).getMessageConverters();
-        assertThat(converters).anyMatch(c -> c instanceof MappingJackson2HttpMessageConverter);
+        assertThat(converters).anyMatch(c -> c instanceof JacksonJsonHttpMessageConverter)
+                .noneMatch(c -> c.getClass().getName().contains("Jackson2"));
     }
 
     @Test

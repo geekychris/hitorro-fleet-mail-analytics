@@ -3,7 +3,7 @@
  */
 package com.hitorro.fleet.mailanalytics.ingest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.hitorro.fleet.mailanalytics.config.MailAnalyticsProperties;
 import com.hitorro.fleet.mailanalytics.entities.Watermark;
 import org.slf4j.Logger;
@@ -36,7 +36,7 @@ public class IngestOrchestrator {
     private final MailAnalyticsProperties props;
     private final WatermarkService watermarks;
     private final PipelineTrigger trigger;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json();
 
     public IngestOrchestrator(MailAnalyticsProperties props,
                               WatermarkService watermarks,
@@ -65,7 +65,7 @@ public class IngestOrchestrator {
                 written.incrementAndGet();
                 if (m.sourceCursor() > maxCursor) maxCursor = m.sourceCursor();
             }
-        } catch (IOException e) {
+        } catch (IOException | tools.jackson.core.JacksonException e) {   // on Jackson 2 a write error was an IOException
             watermarks.markError(source.id(), "ndjson write failed: " + e.getMessage());
             log.warn("IngestOrchestrator[{}] ndjson write failed: {}", source.id(), e.getMessage());
             return new Batch(0, null);

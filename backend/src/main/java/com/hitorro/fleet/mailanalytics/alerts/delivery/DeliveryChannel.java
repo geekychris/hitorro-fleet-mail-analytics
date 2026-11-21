@@ -3,7 +3,7 @@
  */
 package com.hitorro.fleet.mailanalytics.alerts.delivery;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.fleet.mailanalytics.entities.AlertFiring;
 import com.hitorro.fleet.mailanalytics.entities.AlertRule;
 import com.hitorro.fleet.mailanalytics.entities.DeliveryChannelKind;

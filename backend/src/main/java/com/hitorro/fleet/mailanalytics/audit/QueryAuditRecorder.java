@@ -3,7 +3,7 @@
  */
 package com.hitorro.fleet.mailanalytics.audit;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.hitorro.fleet.mailanalytics.entities.QueryAudit;
 import com.hitorro.fleet.mailanalytics.repo.QueryAuditRepository;
 import jakarta.servlet.Filter;

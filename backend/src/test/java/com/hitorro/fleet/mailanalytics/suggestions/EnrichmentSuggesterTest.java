@@ -3,7 +3,7 @@
  */
 package com.hitorro.fleet.mailanalytics.suggestions;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.hitorro.fleet.mailanalytics.config.MailAnalyticsProperties;
 import com.hitorro.fleet.mailanalytics.entities.EnrichmentSuggestion;
 import com.hitorro.fleet.mailanalytics.entities.QueryAudit;
@@ -55,7 +55,7 @@ class EnrichmentSuggesterTest {
     @Test
     void content_scan_url_detector_fires_at_30pct_hit_rate() throws Exception {
         Fixture f = new Fixture();
-        ObjectMapper m = new ObjectMapper();
+        ObjectMapper m = com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json();
         List<Map<String, Object>> docs = new ArrayList<>();
         for (int i = 0; i < 5; i++) docs.add(Map.of("body", Map.of("mls", List.of(Map.of("text", "hello world visit https://example.com/x")))));
         for (int i = 0; i < 5; i++) docs.add(Map.of("body", Map.of("mls", List.of(Map.of("text", "no links here at all")))));
@@ -88,7 +88,7 @@ class EnrichmentSuggesterTest {
         final List<QueryAudit> auditRows = new ArrayList<>();
         final List<EnrichmentSuggestion> stored = new ArrayList<>();
         final Map<String, EnrichmentSuggestion> byKey = new HashMap<>();
-        final ObjectMapper mapper = new ObjectMapper();
+        final ObjectMapper mapper = com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json();
         final AtomicLong ids = new AtomicLong();
 
         Fixture() {

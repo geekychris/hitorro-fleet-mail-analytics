@@ -3,8 +3,8 @@
  */
 package com.hitorro.fleet.mailanalytics.alerts;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.hitorro.fleet.mailanalytics.alerts.delivery.DeliveryChannel;
 import com.hitorro.fleet.mailanalytics.entities.AlertDelivery;
 import com.hitorro.fleet.mailanalytics.entities.AlertFiring;
@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.hitorro.fleet.mailanalytics.config.JsonValues;
 
 /** Fans a firing out to every channel listed in the rule's
  *  {@code deliveryChannelsJson}. One delivery record per (channel, target)
@@ -33,7 +34,7 @@ public class AlertDispatcher {
 
     private final AlertDeliveryRepository deliveries;
     private final Map<DeliveryChannelKind, DeliveryChannel> channels = new HashMap<>();
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json();
 
     public AlertDispatcher(AlertDeliveryRepository deliveries, List<DeliveryChannel> impls) {
         this.deliveries = deliveries;
@@ -57,7 +58,7 @@ public class AlertDispatcher {
     }
 
     private void deliverOne(AlertRule rule, AlertFiring firing, JsonNode target) {
-        String kindStr = target.path("channel").asText();
+        String kindStr = JsonValues.asText(target.path("channel"));
         DeliveryChannelKind kind;
         try { kind = DeliveryChannelKind.valueOf(kindStr.toUpperCase()); }
         catch (Exception e) {
@@ -70,8 +71,8 @@ public class AlertDispatcher {
         AlertDelivery d = new AlertDelivery();
         d.setFiringId(firing.getId());
         d.setChannel(kind);
-        d.setTarget(target.path(kind == DeliveryChannelKind.EMAIL ? "email"
-                       : kind == DeliveryChannelKind.WEBHOOK ? "webhook" : "user").asText());
+        d.setTarget(JsonValues.asText(target.path(kind == DeliveryChannelKind.EMAIL ? "email"
+                       : kind == DeliveryChannelKind.WEBHOOK ? "webhook" : "user")));
         d.setStatus(DeliveryStatus.PENDING);
         AlertDelivery saved = deliveries.save(d);
 

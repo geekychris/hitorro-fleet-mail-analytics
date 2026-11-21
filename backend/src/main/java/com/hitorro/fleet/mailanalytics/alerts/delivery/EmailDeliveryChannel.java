@@ -3,7 +3,7 @@
  */
 package com.hitorro.fleet.mailanalytics.alerts.delivery;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.fleet.mailanalytics.config.MailAnalyticsProperties;
 import com.hitorro.fleet.mailanalytics.entities.AlertFiring;
 import com.hitorro.fleet.mailanalytics.entities.AlertRule;
@@ -16,6 +16,7 @@ import jakarta.mail.internet.MimeMessage;
 import org.springframework.stereotype.Component;
 
 import java.util.Properties;
+import com.hitorro.fleet.mailanalytics.config.JsonValues;
 
 @Component
 public class EmailDeliveryChannel implements DeliveryChannel {
@@ -30,7 +31,7 @@ public class EmailDeliveryChannel implements DeliveryChannel {
     public String deliver(AlertRule rule, AlertFiring firing, JsonNode target) {
         MailAnalyticsProperties.Delivery.Email cfg = props.getDelivery().getEmail();
         if (!cfg.isEnabled()) return "email delivery disabled — skipped";
-        String to = target.path("email").asText();
+        String to = JsonValues.asText(target.path("email"));
         if (to.isEmpty()) throw new IllegalArgumentException("email target missing 'email'");
 
         Properties p = new Properties();

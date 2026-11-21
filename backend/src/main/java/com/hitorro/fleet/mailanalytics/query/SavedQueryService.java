@@ -3,8 +3,8 @@
  */
 package com.hitorro.fleet.mailanalytics.query;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.hitorro.fleet.mailanalytics.entities.SavedQuery;
 import com.hitorro.fleet.mailanalytics.repo.SavedQueryRepository;
 import org.springframework.stereotype.Service;
@@ -12,13 +12,14 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import com.hitorro.fleet.mailanalytics.config.JsonValues;
 
 @Service
 public class SavedQueryService {
 
     private final SavedQueryRepository repo;
     private final RetrievalClient client;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json();
 
     public SavedQueryService(SavedQueryRepository repo, RetrievalClient client) {
         this.repo = repo;
@@ -36,31 +37,31 @@ public class SavedQueryService {
         SavedQuery sq = get(id);
         try {
             JsonNode dsl = mapper.readTree(sq.getDslJson());
-            QueryBuilder qb = QueryBuilder.over(dsl.path("index").asText("mail"))
-                    .text(dsl.path("text").asText(""))
-                    .page(dsl.path("offset").asInt(0),
-                          dsl.path("limit").asInt(20));
-            String from = dsl.path("from").asText(null);
-            String to = dsl.path("to").asText(null);
+            QueryBuilder qb = QueryBuilder.over(JsonValues.asText(dsl.path("index"), "mail"))
+                    .text(JsonValues.asText(dsl.path("text"), ""))
+                    .page(JsonValues.asInt(dsl.path("offset"), 0),
+                          JsonValues.asInt(dsl.path("limit"), 20));
+            String from = JsonValues.asText(dsl.path("from"), null);
+            String to = JsonValues.asText(dsl.path("to"), null);
             Instant fromI = from == null || from.isEmpty() ? null : Instant.parse(from);
             Instant toI = to == null || to.isEmpty() ? null : Instant.parse(to);
             if (fromI != null || toI != null) qb.dateBetween("date_received.date_s", fromI, toI);
             JsonNode filters = dsl.path("filters");
             if (filters.isObject()) {
-                filters.fields().forEachRemaining(e -> {
+                filters.properties().forEach(e -> {
                     JsonNode v = e.getValue();
                     if (v.isArray()) {
                         java.util.List<String> vals = new java.util.ArrayList<>();
-                        v.forEach(x -> vals.add(x.asText()));
+                        v.forEach(x -> vals.add(JsonValues.asText(x)));
                         qb.termIn(e.getKey(), vals);
                     } else {
-                        qb.term(e.getKey(), v.asText());
+                        qb.term(e.getKey(), JsonValues.asText(v));
                     }
                 });
             }
             JsonNode facets = dsl.path("facets");
-            if (facets.isArray()) facets.forEach(f -> qb.facet(f.asText()));
-            String sort = dsl.path("sort").asText(null);
+            if (facets.isArray()) facets.forEach(f -> qb.facet(JsonValues.asText(f)));
+            String sort = JsonValues.asText(dsl.path("sort"), null);
             if (sort != null && !sort.isEmpty()) qb.sort(sort);
             return client.execute(qb.buildExecute());
         } catch (Exception e) {

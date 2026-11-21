@@ -3,7 +3,7 @@
  */
 package com.hitorro.fleet.mailanalytics.analytics;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.hitorro.fleet.mailanalytics.config.MailAnalyticsProperties;
 import com.hitorro.fleet.mailanalytics.query.RetrievalClient;
 import org.junit.jupiter.api.Test;
@@ -21,7 +21,7 @@ class ThreadClusteringServiceTest {
     void normalizes_re_fwd_and_bracketed_list_prefixes() throws Exception {
         MailAnalyticsProperties props = new MailAnalyticsProperties();
         RetrievalClient client = mock(RetrievalClient.class);
-        ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json();
         String payload = """
             {"documents":[
                 {"title":{"mls":[{"text":"Re: [list] status meeting"}]},"sender_address":"a@x","times":{"date_received":1}},

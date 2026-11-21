@@ -3,8 +3,8 @@
  */
 package com.hitorro.fleet.mailanalytics.suggestions;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.hitorro.fleet.mailanalytics.config.MailAnalyticsProperties;
 import com.hitorro.fleet.mailanalytics.entities.EnrichmentSuggestion;
 import com.hitorro.fleet.mailanalytics.entities.QueryAudit;
@@ -27,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import com.hitorro.fleet.mailanalytics.config.JsonValues;
 
 /**
  * Periodic scan → proposes new pipeline enrichments. Two detector families:
@@ -60,7 +61,7 @@ public class EnrichmentSuggester {
     private final EnrichmentSuggestionRepository suggestions;
     private final RetrievalClient retrieval;
     private final MailAnalyticsProperties props;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json();
 
     public EnrichmentSuggester(QueryAuditRepository audits,
                                EnrichmentSuggestionRepository suggestions,
@@ -100,11 +101,11 @@ public class EnrichmentSuggester {
         for (QueryAudit a : recent) {
             try {
                 JsonNode params = mapper.readTree(a.getQueryJson() == null ? "{}" : a.getQueryJson());
-                params.fields().forEachRemaining(e -> {
+                params.properties().forEach(e -> {
                     if (IGNORE_PARAMS.contains(e.getKey())) return;
                     filterHits.merge(e.getKey(), 1, Integer::sum);
                 });
-                String q = params.path("q").asText("");
+                String q = JsonValues.asText(params.path("q"), "");
                 if (q.contains("NE_")) {
                     // Free-text query targeting an NER-tagged bracket
                     for (String tag : NER_TAGS) {
@@ -151,14 +152,14 @@ public class EnrichmentSuggester {
         int n = 0, url = 0, phone = 0, tracking = 0;
         Map<String, Integer> listyDomains = new HashMap<>();
         for (JsonNode doc : sample.path("documents")) {
-            String body = doc.path("body").path("mls").path(0).path("text").asText("");
+            String body = JsonValues.asText(doc.path("body").path("mls").path(0).path("text"), "");
             if (body.isEmpty()) continue;
             n++;
             if (URL_RE.matcher(body).find()) url++;
             if (PHONE_RE.matcher(body).find()) phone++;
             if (TRACKING_RE.matcher(body).find()) tracking++;
-            if (!doc.path("is_newsletter").asBoolean(false)) {
-                String domain = doc.path("sender_domain").asText("");
+            if (!JsonValues.asBoolean(doc.path("is_newsletter"), false)) {
+                String domain = JsonValues.asText(doc.path("sender_domain"), "");
                 // heuristic: newsletter-shaped body without newsletter flag
                 if (!domain.isEmpty() && body.toLowerCase().contains("unsubscribe")) {
                     listyDomains.merge(domain, 1, Integer::sum);

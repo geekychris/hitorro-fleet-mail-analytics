@@ -3,8 +3,8 @@
  */
 package com.hitorro.fleet.mailanalytics.alerts;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.hitorro.fleet.mailanalytics.alerts.delivery.DeliveryChannel;
 import com.hitorro.fleet.mailanalytics.entities.AlertDeltaMode;
 import com.hitorro.fleet.mailanalytics.entities.AlertFiring;
@@ -56,7 +56,7 @@ class AlertEngineTest {
             return d;
         });
         dispatcher = new AlertDispatcher(deliveries, List.of(inboxChannel));
-        mapper = new ObjectMapper();
+        mapper = com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json();
         firingIds = new AtomicLong();
         lastSavedFiring = new AtomicReference<>();
         when(firings.save(any(AlertFiring.class))).thenAnswer(inv -> {

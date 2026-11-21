@@ -3,7 +3,7 @@
  */
 package com.hitorro.fleet.mailanalytics.analytics;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.fleet.mailanalytics.query.MailQueryShapers;
 import com.hitorro.fleet.mailanalytics.query.QueryBuilder;
 import com.hitorro.fleet.mailanalytics.query.RetrievalClient;
@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.hitorro.fleet.mailanalytics.config.JsonValues;
 
 @Service
 public class DashboardService {
@@ -52,6 +53,6 @@ public class DashboardService {
                 .raw(extraFilter)
                 .page(0, 0);
         JsonNode resp = client.execute(qb.buildExecute());
-        return resp == null ? 0 : resp.path("totalHits").asLong();
+        return resp == null ? 0 : JsonValues.asLong(resp.path("totalHits"));
     }
 }

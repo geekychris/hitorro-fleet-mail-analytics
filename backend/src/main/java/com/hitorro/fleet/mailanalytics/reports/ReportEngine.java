@@ -3,8 +3,8 @@
  */
 package com.hitorro.fleet.mailanalytics.reports;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.hitorro.fleet.mailanalytics.analytics.DashboardService;
 import com.hitorro.fleet.mailanalytics.config.MailAnalyticsProperties;
 import com.hitorro.fleet.mailanalytics.entities.Report;
@@ -25,6 +25,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.hitorro.fleet.mailanalytics.config.JsonValues;
 
 @Service
 public class ReportEngine {
@@ -36,7 +37,7 @@ public class ReportEngine {
     private final DashboardService dashboard;
     private final SavedQueryService savedQueries;
     private final MailAnalyticsProperties props;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json();
 
     public ReportEngine(ReportRepository reports, ReportRunRepository runs,
                         DashboardService dashboard, SavedQueryService savedQueries,
@@ -83,7 +84,7 @@ public class ReportEngine {
                 Map<String, Object> queries = new LinkedHashMap<>();
                 JsonNode ids = cfg.path("savedQueryIds");
                 if (ids.isArray()) {
-                    for (JsonNode id : ids) queries.put(id.asText(), savedQueries.run(id.asLong()));
+                    for (JsonNode id : ids) queries.put(JsonValues.asText(id), savedQueries.run(JsonValues.asLong(id)));
                 }
                 out.put("queries", queries);
             }

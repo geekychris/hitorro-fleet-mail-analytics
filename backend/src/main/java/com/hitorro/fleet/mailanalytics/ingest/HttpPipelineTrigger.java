@@ -3,8 +3,8 @@
  */
 package com.hitorro.fleet.mailanalytics.ingest;
 
-import com.hitorro.fleet.mailanalytics.config.Jackson2Codecs;
-import com.fasterxml.jackson.databind.JsonNode;
+import com.hitorro.fleet.mailanalytics.config.JsonCodecs;
+import tools.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +16,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import com.hitorro.fleet.mailanalytics.config.JsonValues;
 
 /**
  * Loads a job YAML template, substitutes {@code __NDJSON_PATH__} with the
@@ -35,8 +36,9 @@ public class HttpPipelineTrigger implements PipelineTrigger {
 
     public HttpPipelineTrigger(
             @Value("${mailanalytics.pipeline.driver-url:http://localhost:8090}") String driverUrl,
-            @Value("${mailanalytics.pipeline.job-template:classpath:jobs/mail-enrich-from-ndjson.yaml}") String jobTemplatePath) {
-        this.client = Jackson2Codecs.webClientBuilder().baseUrl(driverUrl).build();
+            @Value("${mailanalytics.pipeline.job-template:classpath:jobs/mail-enrich-from-ndjson.yaml}") String jobTemplatePath,
+            JsonCodecs codecs) {
+        this.client = codecs.webClientBuilder().baseUrl(driverUrl).build();
         this.jobTemplatePath = jobTemplatePath;
     }
 
@@ -54,7 +56,7 @@ public class HttpPipelineTrigger implements PipelineTrigger {
                     .retrieve()
                     .bodyToMono(JsonNode.class)
                     .block();
-            String jobId = resp != null && resp.has("jobId") ? resp.get("jobId").asText() : "unknown";
+            String jobId = resp != null && resp.has("jobId") ? JsonValues.asText(resp.get("jobId")) : "unknown";
             return new Result(true, jobId, "accepted by mesh-driver");
         } catch (IOException e) {
             log.warn("http pipeline trigger failed to load template {}: {}", jobTemplatePath, e.getMessage());
