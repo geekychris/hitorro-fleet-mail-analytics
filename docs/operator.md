@@ -56,6 +56,42 @@ For hands-off operation, flip to the HTTP trigger by setting
 `mailanalytics.pipeline.driver-url` at a running mesh-driver. The trigger
 will POST substituted YAML to `/mesh/jobs/run` per batch.
 
+## Pulling Mac mail from a mailbridge (`kind: bridge`)
+
+When the app doesn't run on the Mac, which is always the case in Kubernetes, it can pull Mail
+metadata from a **mailbridge** running on the Mac
+([apple_mail_dump `bridge/`](https://github.com/geekychris/apple_mail_dump/tree/main/bridge)).
+The bridge is a read-only HTTPS API over the Envelope Index. `BridgeMailSource` pins the
+bridge's self-signed certificate by its SHA-256 fingerprint and sends the bridge's bearer
+token. The cursor is the Envelope Index ROWID, kept in the watermark's `last_row_id`.
+
+```yaml
+mailanalytics:
+  ingest:
+    sources:
+      - id: m1-mail
+        kind: bridge
+        cron: "0 */5 * * * *"
+        config:
+          base-url: https://192.168.1.70:18443
+          token-file: /etc/mailbridge/token              # or token: ...
+          fingerprint-file: /etc/mailbridge/fingerprint  # or fingerprint: AB:CD:...
+          max-age-days: "7"                              # only mail from the last 7 days (0 = all)
+```
+
+Config keys are matched ignoring case, dashes and underscores, so they can also come from
+environment variables, e.g. `MAILANALYTICS_INGEST_SOURCES_1_CONFIG_BASEURL`. A source with a
+missing token or fingerprint is logged and skipped; the app still starts.
+`GET /api/ingest/sources/{id}/status` shows the bridge's message count. The errors name the
+cause:
+
+| Error | Cause |
+|---|---|
+| 401 | wrong token |
+| 403 | this cluster's source address is not in the bridge's `--allow` list |
+| 503 | the bridge binary lacks Full Disk Access on the Mac |
+| "unreachable" | network failure, or a certificate that doesn't match the pin |
+
 ## Adding an alert
 
 1. `POST /api/saved-queries` with the query DSL:
