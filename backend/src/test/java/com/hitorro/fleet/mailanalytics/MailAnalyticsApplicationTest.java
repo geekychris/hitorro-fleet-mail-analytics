@@ -196,4 +196,66 @@ class MailAnalyticsApplicationTest {
         org.assertj.core.api.Assertions.assertThat(bootJsonMapper.readValue("\"fr_CA\"", java.util.Locale.class))
                 .isEqualTo(java.util.Locale.CANADA_FRENCH);
     }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    com.hitorro.fleet.mailanalytics.reports.ReportEngine reportEngine;
+    @org.springframework.beans.factory.annotation.Autowired
+    com.hitorro.fleet.mailanalytics.repo.ReportRepository reportRepo;
+    @org.springframework.beans.factory.annotation.Autowired
+    com.hitorro.fleet.mailanalytics.alerts.delivery.WebhookDeliveryChannel webhookChannel;
+    @org.springframework.beans.factory.annotation.Autowired
+    com.hitorro.fleet.mailanalytics.repo.WebhookConfigRepository webhookRepo;
+
+    static final String ISO_INSTANT = "\"\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z\"";
+
+    /**
+     * Report artifacts write java.time values as ISO-8601 strings, as the REST API does (user decision
+     * for 4.0.0; on 3.x every report run failed to serialize its Instant).
+     */
+    @Test
+    void reportArtifactWritesIsoInstants() throws Exception {
+        com.hitorro.fleet.mailanalytics.entities.Report r = new com.hitorro.fleet.mailanalytics.entities.Report();
+        r.setName("iso-test");
+        r.setKind(com.hitorro.fleet.mailanalytics.entities.ReportKind.CUSTOM);
+        r.setConfigJson("{\"x\":1}");
+        r.setCron("0 0 6 * * *");
+        r = reportRepo.save(r);
+        var run = reportEngine.runNow(r.getId());
+        assertThat(run.getErrorMessage()).isNull();
+        String artifact = java.nio.file.Files.readString(java.nio.file.Path.of(run.getArtifactPath()));
+        assertThat(artifact).containsPattern("\"generatedAt\" : " + ISO_INSTANT);
+        assertThat(artifact).doesNotContainPattern("\"generatedAt\" : \\d");
+    }
+
+    /** Webhook alert bodies write the firing's Instant as an ISO-8601 string (same decision). */
+    @Test
+    void webhookBodyWritesIsoInstants() throws Exception {
+        AtomicReference<String> body = new AtomicReference<>();
+        HttpServer hook = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        hook.createContext("/hook", ex -> {
+            body.set(new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            ex.sendResponseHeaders(200, -1);
+            ex.close();
+        });
+        hook.start();
+        try {
+            var cfg = new com.hitorro.fleet.mailanalytics.entities.WebhookConfig();
+            cfg.setName("iso-hook");
+            cfg.setUrl("http://127.0.0.1:" + hook.getAddress().getPort() + "/hook");
+            cfg.setEnabled(true);
+            webhookRepo.save(cfg);
+            var rule = new com.hitorro.fleet.mailanalytics.entities.AlertRule();
+            rule.setId(7L);
+            rule.setName("rule");
+            rule.setCron("0 0 * * * *");
+            var firing = new com.hitorro.fleet.mailanalytics.entities.AlertFiring();
+            firing.setId(9L);
+            firing.setFiredAt(java.time.Instant.parse("2026-01-02T03:04:05.123Z"));
+            firing.setFingerprint("fp");
+            webhookChannel.deliver(rule, firing, JSON.readTree("{\"channel\":\"webhook\",\"webhook\":\"iso-hook\"}"));
+            assertThat(body.get()).contains("\"at\":\"2026-01-02T03:04:05.123Z\"");
+        } finally {
+            hook.stop(0);
+        }
+    }
 }

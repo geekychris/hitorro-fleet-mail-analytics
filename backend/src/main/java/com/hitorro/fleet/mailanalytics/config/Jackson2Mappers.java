@@ -23,6 +23,10 @@ public final class Jackson2Mappers {
             .maxNestingDepth(1000).build();
 
     private static final JsonMapper JSON = builder().build();
+    private static final JsonMapper ISO_DATES = builder()
+            .disable(tools.jackson.databind.cfg.DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+            .disable(tools.jackson.databind.cfg.DateTimeFeature.WRITE_DURATIONS_AS_TIMESTAMPS)
+            .build();
 
     private Jackson2Mappers() {}
 
@@ -35,5 +39,14 @@ public final class Jackson2Mappers {
 
     public static JsonMapper json() {
         return JSON;
+    }
+
+    /**
+     * {@link #json()} with java.time values (Instant, LocalDate, Duration, ...) written as ISO-8601
+     * strings, as the REST API writes them. Used for report artifacts and webhook bodies (user decision
+     * for 4.0.0): on 3.x those payloads failed to serialize any Instant, so they had no format to keep.
+     */
+    public static JsonMapper isoDates() {
+        return ISO_DATES;
     }
 }

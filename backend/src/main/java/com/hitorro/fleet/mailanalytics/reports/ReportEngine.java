@@ -37,7 +37,8 @@ public class ReportEngine {
     private final DashboardService dashboard;
     private final SavedQueryService savedQueries;
     private final MailAnalyticsProperties props;
-    private final ObjectMapper mapper = com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json();
+    // ISO-8601 java.time values, as the REST API (report artifacts / webhook bodies; see Jackson2Mappers)
+    private final ObjectMapper mapper = com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.isoDates();
 
     public ReportEngine(ReportRepository reports, ReportRunRepository runs,
                         DashboardService dashboard, SavedQueryService savedQueries,

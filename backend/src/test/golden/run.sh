@@ -14,7 +14,8 @@
 # fleet-retrieval and webhooks meanwhile, then the 11 H2 tables. Compared with the main recordings
 # (byte for byte after masking run values; order-insensitively where main's order varies), except the
 # records in accepted-4.0.0.jsonl.gz: deliberate differences (java.time now serializable: report runs
-# and webhook alert delivery succeed where main failed), compared with that recording of 4.0.0.
+# and webhook alert delivery succeed where main failed, writing java.time as ISO-8601 like the REST
+# API, per the user's decision), compared with that recording of 4.0.0.
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/../../../.." && pwd)
