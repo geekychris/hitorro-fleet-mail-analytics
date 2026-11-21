@@ -3,8 +3,8 @@
  */
 package com.hitorro.fleet.mailanalytics.summary;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.hitorro.fleet.mailanalytics.analytics.ThreadClusteringService;
 import com.hitorro.fleet.mailanalytics.config.MailAnalyticsProperties;
 import com.hitorro.fleet.mailanalytics.query.RetrievalClient;
@@ -43,7 +43,7 @@ class SummaryServiceTest {
     private String stubBaseUrl;
     private final AtomicReference<String> lastRequestPath = new AtomicReference<>();
     private final AtomicReference<String> lastRequestBody = new AtomicReference<>();
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json();
 
     @BeforeEach
     void startStub() throws IOException {
@@ -106,7 +106,7 @@ class SummaryServiceTest {
         props.getRetrieval().setBaseUrl(stubBaseUrl);
         props.getRetrieval().setDefaultIndex("mail");
 
-        SummaryService svc = new SummaryService(retrieval, threads, props);
+        SummaryService svc = new SummaryService(retrieval, threads, props, new com.hitorro.fleet.mailanalytics.config.JsonCodecs(com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json()));
         SummaryService.Result r = svc.summarizeThread("k1", SummaryStyle.BRIEF, null, null, null);
 
         assertThat(r.ok()).isTrue();
@@ -133,7 +133,7 @@ class SummaryServiceTest {
         MailAnalyticsProperties props = new MailAnalyticsProperties();
         props.getRetrieval().setBaseUrl(stubBaseUrl);
 
-        SummaryService svc = new SummaryService(retrieval, threads, props);
+        SummaryService svc = new SummaryService(retrieval, threads, props, new com.hitorro.fleet.mailanalytics.config.JsonCodecs(com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json()));
         SummaryService.Result r = svc.summarizeThread("nonexistent-key", SummaryStyle.BRIEF, null, null, null);
         assertThat(r.ok()).isFalse();
         assertThat(r.error()).contains("no thread with subject key");
@@ -143,7 +143,7 @@ class SummaryServiceTest {
         MailAnalyticsProperties props = new MailAnalyticsProperties();
         props.getRetrieval().setBaseUrl(stubBaseUrl);
         return new SummaryService(mock(RetrievalClient.class),
-                mock(ThreadClusteringService.class), props);
+                mock(ThreadClusteringService.class), props, new com.hitorro.fleet.mailanalytics.config.JsonCodecs(com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json()));
     }
 
     private static String drain(InputStream in) throws IOException {

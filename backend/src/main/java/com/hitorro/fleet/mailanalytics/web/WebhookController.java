@@ -3,7 +3,7 @@
  */
 package com.hitorro.fleet.mailanalytics.web;
 
-import com.hitorro.fleet.mailanalytics.config.Jackson2Codecs;
+import com.hitorro.fleet.mailanalytics.config.JsonCodecs;
 import com.hitorro.fleet.mailanalytics.entities.WebhookConfig;
 import com.hitorro.fleet.mailanalytics.repo.WebhookConfigRepository;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +26,9 @@ public class WebhookController {
 
     private final WebhookConfigRepository repo;
 
-    public WebhookController(WebhookConfigRepository repo) { this.repo = repo; }
+    private final JsonCodecs codecs;
+
+    public WebhookController(WebhookConfigRepository repo, JsonCodecs codecs) { this.repo = repo; this.codecs = codecs; }
 
     @GetMapping public List<WebhookConfig> list() { return repo.findAll(); }
     @GetMapping("/{id}") public WebhookConfig get(@PathVariable Long id) { return repo.findById(id).orElseThrow(); }
@@ -50,7 +52,7 @@ public class WebhookController {
     public Map<String, Object> test(@PathVariable Long id) {
         WebhookConfig w = repo.findById(id).orElseThrow();
         try {
-            Integer status = Jackson2Codecs.webClientBuilder().baseUrl(w.getUrl()).build()
+            Integer status = codecs.webClientBuilder().baseUrl(w.getUrl()).build()
                     .post().uri("").header("Content-Type", "application/json")
                     .bodyValue(Map.of("test", true, "name", w.getName()))
                     .exchangeToMono(r -> r.releaseBody().thenReturn(r.statusCode().value()))

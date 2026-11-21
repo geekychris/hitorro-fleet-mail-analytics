@@ -3,7 +3,7 @@
  */
 package com.hitorro.fleet.mailanalytics.query;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.fleet.mailanalytics.config.MailAnalyticsProperties;
 import org.springframework.stereotype.Component;
 
@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.hitorro.fleet.mailanalytics.config.JsonValues;
 
 /** Canned query shapes used by the dashboard, drilldown, and alert engine. */
 @Component
@@ -107,7 +108,7 @@ public class MailQueryShapers {
             JsonNode sentences = doc.path("body").path("mls").path(0).path("segmented_ner");
             if (!sentences.isArray()) continue;
             for (JsonNode s : sentences) {
-                java.util.regex.Matcher m = p.matcher(s.asText());
+                java.util.regex.Matcher m = p.matcher(JsonValues.asText(s));
                 while (m.find()) {
                     String tok = m.group(1).trim();
                     if (tok.length() < 2) continue;
@@ -170,7 +171,7 @@ public class MailQueryShapers {
     private long totalHits(JsonNode resp) {
         if (resp == null) return 0;
         JsonNode n = resp.get("totalHits");
-        return n == null ? 0 : n.asLong();
+        return n == null ? 0 : JsonValues.asLong(n);
     }
 
     private List<TopN> facetValuesTopN(JsonNode resp, String dim, int limit,
@@ -182,9 +183,9 @@ public class MailQueryShapers {
         JsonNode values = dimNode.path("values");
         if (!values.isArray()) return out;
         for (JsonNode v : values) {
-            String label = v.path("value").asText();
+            String label = JsonValues.asText(v.path("value"));
             if (!filter.test(label)) continue;
-            out.add(new TopN(label, v.path("count").asLong()));
+            out.add(new TopN(label, JsonValues.asLong(v.path("count"))));
             if (out.size() >= limit) break;
         }
         return out;

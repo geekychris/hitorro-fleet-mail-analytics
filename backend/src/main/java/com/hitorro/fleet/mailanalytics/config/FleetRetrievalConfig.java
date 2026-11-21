@@ -24,7 +24,7 @@ public class FleetRetrievalConfig {
     /** Named {@code fleetWebClient} so RetrievalClient can pick it up by name
      *  even after we later add other WebClient beans for webhook delivery. */
     @Bean
-    public WebClient fleetWebClient(MailAnalyticsProperties props) {
+    public WebClient fleetWebClient(MailAnalyticsProperties props, JsonCodecs codecs) {
         int timeoutMs = props.getRetrieval().getTimeoutMs();
         String baseUrl = props.getRetrieval().getBaseUrl().replaceAll("/+$", "");
         HttpClient http = HttpClient.create()
@@ -32,7 +32,7 @@ public class FleetRetrievalConfig {
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, Math.min(5000, timeoutMs))
                 .doOnConnected(c -> c.addHandlerLast(
                         new ReadTimeoutHandler(timeoutMs, TimeUnit.MILLISECONDS)));
-        return Jackson2Codecs.webClientBuilder()
+        return codecs.webClientBuilder()
                 .baseUrl(baseUrl)
                 .clientConnector(new ReactorClientHttpConnector(http))
                 // Enriched mail JVS (segmented_ner per sentence) can push

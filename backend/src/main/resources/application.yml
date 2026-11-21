@@ -10,21 +10,20 @@ spring:
     name: hitorro-fleet-mail-analytics
   profiles:
     default: standalone
-  # Spring Boot 4 defaults to Jackson 3 (tools.jackson). The service and the
-  # HiTorro libraries use Jackson 2 JsonNode, so HTTP stays on Jackson 2:
-  # converters for Spring MVC, codecs for WebFlux (the WebClients built with
-  # WebClient.builder() register theirs in Jackson2Codecs).
-  http:
-    converters:
-      preferred-json-mapper: jackson2
-    codecs:
-      preferred-json-mapper: jackson2
-  # spring.jackson2.* configures the Jackson 2 ObjectMapper that Spring MVC
-  # uses (spring.jackson.* only reaches the Jackson 3 one, which already
-  # writes dates as ISO-8601 strings by default).
-  jackson2:
-    serialization:
-      write-dates-as-timestamps: false
+  # Spring MVC and the WebClients (JsonCodecs) use Boot's Jackson 3 JsonMapper. Keep the
+  # format the app had on Jackson 2 (Boot's Jackson 2 mapper, with
+  # spring.jackson2.serialization.write-dates-as-timestamps: false): Jackson 2 defaults +
+  # Boot's (ISO dates, unknown properties ignored) and Jackson 2.18's stream limits.
+  # See Jackson2CompatConfig.
+  jackson:
+    use-jackson2-defaults: true
+    factory:
+      constraints:
+        read:
+          max-nesting-depth: 1000
+          max-string-length: 20000000
+        write:
+          max-nesting-depth: 1000
   jpa:
     open-in-view: false
     hibernate:
@@ -42,6 +41,9 @@ spring:
 
 management:
   endpoints:
+    # Actuator JSON comes from Jackson2CompatConfig.endpointJsonMapper (Jackson 2's format).
+    jackson:
+      isolated-json-mapper: false
     web:
       exposure:
         include: health,info,metrics,prometheus

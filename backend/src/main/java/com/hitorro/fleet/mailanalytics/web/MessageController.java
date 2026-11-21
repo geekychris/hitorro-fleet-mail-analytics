@@ -3,7 +3,7 @@
  */
 package com.hitorro.fleet.mailanalytics.web;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.fleet.mailanalytics.config.MailAnalyticsProperties;
 import com.hitorro.fleet.mailanalytics.query.QueryBuilder;
 import com.hitorro.fleet.mailanalytics.query.RetrievalClient;

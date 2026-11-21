@@ -3,8 +3,8 @@
  */
 package com.hitorro.fleet.mailanalytics.alerts;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.hitorro.fleet.mailanalytics.entities.AlertDeltaMode;
 import com.hitorro.fleet.mailanalytics.entities.AlertFiring;
 import com.hitorro.fleet.mailanalytics.entities.AlertRule;
@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import com.hitorro.fleet.mailanalytics.config.JsonValues;
 
 @Service
 public class AlertEngine {
@@ -32,7 +33,7 @@ public class AlertEngine {
     private final AlertFiringRepository firings;
     private final SavedQueryService savedQueries;
     private final AlertDispatcher dispatcher;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json();
 
     public AlertEngine(AlertRuleRepository rules, AlertFiringRepository firings,
                        SavedQueryService savedQueries, AlertDispatcher dispatcher) {
@@ -64,7 +65,7 @@ public class AlertEngine {
             return Result.error(ruleId, e.getMessage());
         }
 
-        long total = resp == null ? 0 : resp.path("totalHits").asLong();
+        long total = resp == null ? 0 : JsonValues.asLong(resp.path("totalHits"));
         List<String> ids = extractIds(resp);
         String fp = fingerprint(ids, total);
 
@@ -83,7 +84,7 @@ public class AlertEngine {
             firing.setResultSummaryJson(mapper.writeValueAsString(
                     java.util.Map.of("totalHits", total,
                             "matchedIdsCount", ids.size(),
-                            "query", resp == null ? "" : resp.path("query").asText(""))));
+                            "query", resp == null ? "" : JsonValues.asText(resp.path("query"), ""))));
             firing.setMatchedDocIdsJson(mapper.writeValueAsString(ids));
         } catch (Exception e) {
             firing.setResultSummaryJson("{\"totalHits\":" + total + "}");
@@ -107,7 +108,7 @@ public class AlertEngine {
     private long extractThreshold(AlertRule rule, long fallback) {
         try {
             JsonNode cfg = mapper.readTree(rule.getThresholdConfigJson() == null ? "{}" : rule.getThresholdConfigJson());
-            return cfg.path("gte").asLong(fallback);
+            return JsonValues.asLong(cfg.path("gte"), fallback);
         } catch (Exception e) { return fallback; }
     }
 
@@ -118,8 +119,8 @@ public class AlertEngine {
         if (!docs.isArray()) return out;
         for (JsonNode d : docs) {
             JsonNode id = d.path("id");
-            if (id.isObject()) out.add(id.path("id").asText());
-            else out.add(id.asText());
+            if (id.isObject()) out.add(JsonValues.asText(id.path("id")));
+            else out.add(JsonValues.asText(id));
         }
         return out;
     }

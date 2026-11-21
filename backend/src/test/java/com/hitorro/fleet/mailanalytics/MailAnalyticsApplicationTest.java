@@ -3,8 +3,8 @@
  */
 package com.hitorro.fleet.mailanalytics;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.hitorro.fleet.mailanalytics.query.RetrievalClient;
 import com.sun.net.httpserver.HttpServer;
 import org.flywaydb.core.Flyway;
@@ -17,7 +17,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -63,7 +63,7 @@ class MailAnalyticsApplicationTest {
     private static final String SEARCH_RESPONSE =
             "{\"total\":1,\"hits\":[{\"id\":\"m-1\",\"subject\":\"Quarterly report\",\"score\":1.5}]}";
 
-    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final ObjectMapper JSON = com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json();
     private static final AtomicReference<String> lastExecuteBody = new AtomicReference<>();
     private static HttpServer retrieval;
     private static Path tmp;
@@ -122,10 +122,12 @@ class MailAnalyticsApplicationTest {
     }
 
     @Test
-    void springMvcUsesJackson2() {
+    void springMvcUsesJackson3() {
+        // Jackson 3 (Boot's mapper, configured for Jackson 2's format); the jackson2 bridge is gone.
         List<HttpMessageConverter<?>> converters =
                 context.getBean(RequestMappingHandlerAdapter.class).getMessageConverters();
-        assertThat(converters).anyMatch(c -> c instanceof MappingJackson2HttpMessageConverter);
+        assertThat(converters).anyMatch(c -> c instanceof JacksonJsonHttpMessageConverter)
+                .noneMatch(c -> c.getClass().getName().contains("Jackson2"));
     }
 
     @Test
@@ -171,5 +173,89 @@ class MailAnalyticsApplicationTest {
         JsonNode indexes = retrievalClient.indexes();
         assertThat(indexes.path("indexes").size()).isEqualTo(20_000);
         assertThat(indexes.path("indexes").get(19_999).path("name").asText()).isEqualTo("index-19999");
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    tools.jackson.databind.json.JsonMapper bootJsonMapper;
+
+    /**
+     * Boot's mapper (Spring MVC's) writes what Boot's Jackson 2 mapper did for the JDK types Jackson 3
+     * changed: Locale as {@code toString()} ("fr_CA", not the language tag "fr-CA"), Month by name (not
+     * 10), byte[] in valueToTree as a binary (base64) node, and Instant as an ISO string.
+     */
+    @org.junit.jupiter.api.Test
+    void bootMapperWritesJdkTypesAsJackson2() throws Exception {
+        java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("locale", java.util.Locale.CANADA_FRENCH);
+        m.put("month", java.time.Month.NOVEMBER);
+        m.put("bytes", new byte[]{1, 2, 3});
+        m.put("at", java.time.Instant.parse("2026-01-02T03:04:05.123Z"));
+        org.assertj.core.api.Assertions.assertThat(bootJsonMapper.writeValueAsString(m))
+                .isEqualTo("{\"locale\":\"fr_CA\",\"month\":\"NOVEMBER\",\"bytes\":\"AQID\",\"at\":\"2026-01-02T03:04:05.123Z\"}");
+        org.assertj.core.api.Assertions.assertThat(bootJsonMapper.valueToTree(new byte[]{1, 2, 3}).isBinary()).isTrue();
+        org.assertj.core.api.Assertions.assertThat(bootJsonMapper.readValue("\"fr_CA\"", java.util.Locale.class))
+                .isEqualTo(java.util.Locale.CANADA_FRENCH);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    com.hitorro.fleet.mailanalytics.reports.ReportEngine reportEngine;
+    @org.springframework.beans.factory.annotation.Autowired
+    com.hitorro.fleet.mailanalytics.repo.ReportRepository reportRepo;
+    @org.springframework.beans.factory.annotation.Autowired
+    com.hitorro.fleet.mailanalytics.alerts.delivery.WebhookDeliveryChannel webhookChannel;
+    @org.springframework.beans.factory.annotation.Autowired
+    com.hitorro.fleet.mailanalytics.repo.WebhookConfigRepository webhookRepo;
+
+    static final String ISO_INSTANT = "\"\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z\"";
+
+    /**
+     * Report artifacts write java.time values as ISO-8601 strings, as the REST API does (user decision
+     * for 4.0.0; on 3.x every report run failed to serialize its Instant).
+     */
+    @Test
+    void reportArtifactWritesIsoInstants() throws Exception {
+        com.hitorro.fleet.mailanalytics.entities.Report r = new com.hitorro.fleet.mailanalytics.entities.Report();
+        r.setName("iso-test");
+        r.setKind(com.hitorro.fleet.mailanalytics.entities.ReportKind.CUSTOM);
+        r.setConfigJson("{\"x\":1}");
+        r.setCron("0 0 6 * * *");
+        r = reportRepo.save(r);
+        var run = reportEngine.runNow(r.getId());
+        assertThat(run.getErrorMessage()).isNull();
+        String artifact = java.nio.file.Files.readString(java.nio.file.Path.of(run.getArtifactPath()));
+        assertThat(artifact).containsPattern("\"generatedAt\" : " + ISO_INSTANT);
+        assertThat(artifact).doesNotContainPattern("\"generatedAt\" : \\d");
+    }
+
+    /** Webhook alert bodies write the firing's Instant as an ISO-8601 string (same decision). */
+    @Test
+    void webhookBodyWritesIsoInstants() throws Exception {
+        AtomicReference<String> body = new AtomicReference<>();
+        HttpServer hook = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        hook.createContext("/hook", ex -> {
+            body.set(new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            ex.sendResponseHeaders(200, -1);
+            ex.close();
+        });
+        hook.start();
+        try {
+            var cfg = new com.hitorro.fleet.mailanalytics.entities.WebhookConfig();
+            cfg.setName("iso-hook");
+            cfg.setUrl("http://127.0.0.1:" + hook.getAddress().getPort() + "/hook");
+            cfg.setEnabled(true);
+            webhookRepo.save(cfg);
+            var rule = new com.hitorro.fleet.mailanalytics.entities.AlertRule();
+            rule.setId(7L);
+            rule.setName("rule");
+            rule.setCron("0 0 * * * *");
+            var firing = new com.hitorro.fleet.mailanalytics.entities.AlertFiring();
+            firing.setId(9L);
+            firing.setFiredAt(java.time.Instant.parse("2026-01-02T03:04:05.123Z"));
+            firing.setFingerprint("fp");
+            webhookChannel.deliver(rule, firing, JSON.readTree("{\"channel\":\"webhook\",\"webhook\":\"iso-hook\"}"));
+            assertThat(body.get()).contains("\"at\":\"2026-01-02T03:04:05.123Z\"");
+        } finally {
+            hook.stop(0);
+        }
     }
 }

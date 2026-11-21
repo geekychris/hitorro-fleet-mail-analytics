@@ -3,9 +3,9 @@
  */
 package com.hitorro.fleet.mailanalytics.alerts.delivery;
 
-import com.hitorro.fleet.mailanalytics.config.Jackson2Codecs;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hitorro.fleet.mailanalytics.config.JsonCodecs;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.hitorro.fleet.mailanalytics.config.MailAnalyticsProperties;
 import com.hitorro.fleet.mailanalytics.entities.AlertFiring;
 import com.hitorro.fleet.mailanalytics.entities.AlertRule;
@@ -22,24 +22,29 @@ import java.time.Duration;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.hitorro.fleet.mailanalytics.config.JsonValues;
 
 @Component
 public class WebhookDeliveryChannel implements DeliveryChannel {
 
     private final WebhookConfigRepository repo;
     private final MailAnalyticsProperties props;
-    private final ObjectMapper mapper = new ObjectMapper();
+    // ISO-8601 java.time values, as the REST API (report artifacts / webhook bodies; see Jackson2Mappers)
+    private final ObjectMapper mapper = com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.isoDates();
 
-    public WebhookDeliveryChannel(WebhookConfigRepository repo, MailAnalyticsProperties props) {
+    private final JsonCodecs codecs;
+
+    public WebhookDeliveryChannel(WebhookConfigRepository repo, MailAnalyticsProperties props, JsonCodecs codecs) {
         this.repo = repo;
         this.props = props;
+        this.codecs = codecs;
     }
 
     @Override public DeliveryChannelKind kind() { return DeliveryChannelKind.WEBHOOK; }
 
     @Override
     public String deliver(AlertRule rule, AlertFiring firing, JsonNode target) {
-        String name = target.path("webhook").asText();
+        String name = JsonValues.asText(target.path("webhook"));
         if (name.isEmpty()) throw new IllegalArgumentException("webhook target missing 'webhook' name");
         WebhookConfig hook = repo.findByName(name)
                 .orElseThrow(() -> new IllegalArgumentException("no webhook named " + name));
@@ -54,12 +59,12 @@ public class WebhookDeliveryChannel implements DeliveryChannel {
 
         try {
             String bodyStr = mapper.writeValueAsString(body);
-            WebClient.RequestBodySpec req = Jackson2Codecs.webClientBuilder()
+            WebClient.RequestBodySpec req = codecs.webClientBuilder()
                     .baseUrl(hook.getUrl()).build()
                     .post().uri("").header("Content-Type", "application/json");
             if (hook.getHeadersJson() != null && !hook.getHeadersJson().isBlank()) {
                 JsonNode hdrs = mapper.readTree(hook.getHeadersJson());
-                hdrs.fields().forEachRemaining(e -> req.header(e.getKey(), e.getValue().asText()));
+                hdrs.properties().forEach(e -> req.header(e.getKey(), JsonValues.asText(e.getValue())));
             }
             if (hook.getSecret() != null && !hook.getSecret().isEmpty()) {
                 req.header("X-Signature", "sha256=" + hmacSha256(bodyStr, hook.getSecret()));

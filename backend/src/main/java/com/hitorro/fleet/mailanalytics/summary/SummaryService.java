@@ -3,9 +3,9 @@
  */
 package com.hitorro.fleet.mailanalytics.summary;
 
-import com.hitorro.fleet.mailanalytics.config.Jackson2Codecs;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hitorro.fleet.mailanalytics.config.JsonCodecs;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.hitorro.fleet.mailanalytics.analytics.ThreadClusteringService;
 import com.hitorro.fleet.mailanalytics.config.MailAnalyticsProperties;
 import com.hitorro.fleet.mailanalytics.query.QueryBuilder;
@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.hitorro.fleet.mailanalytics.config.JsonValues;
 
 /**
  * Assembles grouped mail content (threads, entity-mentions) and hands it
@@ -45,15 +46,15 @@ public class SummaryService {
     private final ThreadClusteringService threads;
     private final MailAnalyticsProperties props;
     private final WebClient fleet;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = com.hitorro.fleet.mailanalytics.config.Jackson2Mappers.json();
 
     public SummaryService(RetrievalClient retrieval,
                           ThreadClusteringService threads,
-                          MailAnalyticsProperties props) {
+                          MailAnalyticsProperties props, JsonCodecs codecs) {
         this.retrieval = retrieval;
         this.threads = threads;
         this.props = props;
-        this.fleet = Jackson2Codecs.webClientBuilder()
+        this.fleet = codecs.webClientBuilder()
                 .baseUrl(props.getRetrieval().getBaseUrl().replaceAll("/+$", ""))
                 .codecs(cfg -> cfg.defaultCodecs().maxInMemorySize(4 * 1024 * 1024))
                 .build();
@@ -107,7 +108,7 @@ public class SummaryService {
             if (remote != null && remote.isArray() && remote.size() > 0) {
                 List<Map<String, String>> out = new java.util.ArrayList<>();
                 for (JsonNode n : remote) {
-                    String id = n.path("id").asText();
+                    String id = JsonValues.asText(n.path("id"));
                     out.add(Map.of(
                             "id", id,
                             "label", labelFor(id),
@@ -182,12 +183,11 @@ public class SummaryService {
         int i = 0;
         for (JsonNode d : docs) {
             sb.append("--- Message ").append(++i).append(" ---\n");
-            sb.append("Subject: ").append(d.path("title").path("mls").path(0).path("text").asText("")).append("\n");
-            sb.append("From: ").append(d.path("sender_address").asText("")).append("\n");
-            long dt = d.path("date_received").asLong(0);
+            sb.append("Subject: ").append(JsonValues.asText(d.path("title").path("mls").path(0).path("text"), "")).append("\n");
+            sb.append("From: ").append(JsonValues.asText(d.path("sender_address"), "")).append("\n");
+            long dt = JsonValues.asLong(d.path("date_received"), 0);
             if (dt > 0) sb.append("Date: ").append(Instant.ofEpochMilli(dt)).append("\n");
-            String body = d.path("body").path("mls").path(0).path("clean").asText(
-                    d.path("body").path("mls").path(0).path("text").asText(""));
+            String body = com.hitorro.fleet.mailanalytics.config.JsonValues.asText(d.path("body").path("mls").path(0).path("clean"), JsonValues.asText(d.path("body").path("mls").path(0).path("text"), ""));
             if (!body.isBlank()) sb.append("\n").append(body).append("\n");
             sb.append("\n");
         }
@@ -198,7 +198,7 @@ public class SummaryService {
     private String fetchBody(Object idNode) {
         try {
             String id;
-            if (idNode instanceof JsonNode jn) id = jn.path("id").asText(jn.asText());
+            if (idNode instanceof JsonNode jn) id = com.hitorro.fleet.mailanalytics.config.JsonValues.asText(jn.path("id"), JsonValues.asText(jn));
             else id = String.valueOf(idNode);
             if (id == null || id.isBlank() || "null".equals(id)) return null;
             QueryBuilder qb = QueryBuilder.over(props.getRetrieval().getDefaultIndex())
@@ -207,8 +207,8 @@ public class SummaryService {
             JsonNode resp = retrieval.execute(qb.buildExecute());
             JsonNode doc = resp == null ? null : resp.path("documents").path(0);
             if (doc == null || doc.isMissingNode()) return null;
-            String clean = doc.path("body").path("mls").path(0).path("clean").asText("");
-            if (clean.isBlank()) clean = doc.path("body").path("mls").path(0).path("text").asText("");
+            String clean = JsonValues.asText(doc.path("body").path("mls").path(0).path("clean"), "");
+            if (clean.isBlank()) clean = JsonValues.asText(doc.path("body").path("mls").path(0).path("text"), "");
             return clean;
         } catch (Exception e) {
             log.debug("fetchBody({}) failed: {}", idNode, e.getMessage());
@@ -231,7 +231,7 @@ public class SummaryService {
                     .bodyToMono(JsonNode.class)
                     .block(Duration.ofSeconds(180));
             long ms = System.currentTimeMillis() - t0;
-            String summary = resp == null ? "" : resp.path("summary").asText("");
+            String summary = resp == null ? "" : JsonValues.asText(resp.path("summary"), "");
             Map<String, Object> out = new LinkedHashMap<>(meta);
             out.put("style", style.name());
             out.put("elapsedMs", ms);
